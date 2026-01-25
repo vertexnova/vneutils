@@ -1,0 +1,99 @@
+# ----------------------------------------------------------------------
+# Copyright (c) 2025 Ajeet Singh Yadav. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License")
+#
+# Author:    Ajeet Singh Yadav
+# Created:   January 2025
+#
+# Autodoc:   yes
+# ----------------------------------------------------------------------
+
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        include:
+          - compiler: gcc
+            c_compiler: gcc
+            cpp_compiler: g++
+          - compiler: clang
+            c_compiler: clang
+            cpp_compiler: clang++
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+          -DBUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build --config Release --parallel
+
+    - name: Test
+      working-directory: build
+      run: ctest --output-on-failure
+
+  macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build --config Release --parallel
+
+    - name: Test
+      working-directory: build
+      run: ctest --output-on-failure
+
+  windows:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DBUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build --config Release --parallel
+
+    - name: Test
+      working-directory: build
+      run: ctest --output-on-failure -C Release
