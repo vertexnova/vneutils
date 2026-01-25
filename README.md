@@ -4,6 +4,9 @@
   <a href="https://github.com/vertexnova/vneutils/actions/workflows/ci.yml">
     <img src="https://github.com/vertexnova/vneutils/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"/>
   </a>
+  <a href="https://codecov.io/gh/vertexnova/vneutils">
+    <img src="https://codecov.io/gh/vertexnova/vneutils/branch/main/graph/badge.svg" alt="Coverage"/>
+  </a>
   <img src="https://img.shields.io/badge/C%2B%2B-20-blue.svg" alt="C++ Standard"/>
   <img src="https://img.shields.io/badge/license-Apache%202.0-green.svg" alt="License"/>
 </p>

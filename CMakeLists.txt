@@ -47,6 +47,9 @@ include(CppCheck)
 option(ENABLE_CLANG_TIDY "Enable static analysis with clang-tidy" OFF)
 include(ClangTidy)
 
+# Enable coverage
+include(FindCoverage)
+
 #==============================================================================
 # Compiler Warnings
 #==============================================================================
