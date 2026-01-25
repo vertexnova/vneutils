@@ -212,3 +212,206 @@ TEST_F(CommandLineParserTest, ParseInvalidArgc) {
     EXPECT_FALSE(parser_->parse(-1, argv));
     EXPECT_FALSE(parser_->getErrorMessage().empty());
 }
+
+//==============================================================================
+// CommandLineOption Tests
+//==============================================================================
+
+TEST(CommandLineOptionTest, SingleNameConstructor) {
+    CommandLineOption option("--test", "Test description", "value", "default");
+
+    EXPECT_EQ(option.getName(), "--test");
+    EXPECT_EQ(option.getNames().size(), 1);
+    EXPECT_EQ(option.getDescription(), "Test description");
+    EXPECT_EQ(option.getValueName(), "value");
+    EXPECT_EQ(option.getDefaultValue(), "default");
+    EXPECT_TRUE(option.takesValue());
+    EXPECT_TRUE(option.hasDefaultValue());
+}
+
+TEST(CommandLineOptionTest, MultipleNamesConstructor) {
+    CommandLineOption option(std::vector<std::string>{"--verbose", "-v"}, "Enable verbose mode");
+
+    EXPECT_EQ(option.getName(), "--verbose");
+    EXPECT_EQ(option.getNames().size(), 2);
+    EXPECT_EQ(option.getNames()[0], "--verbose");
+    EXPECT_EQ(option.getNames()[1], "-v");
+    EXPECT_EQ(option.getDescription(), "Enable verbose mode");
+    EXPECT_TRUE(option.getValueName().empty());
+    EXPECT_TRUE(option.getDefaultValue().empty());
+    EXPECT_FALSE(option.takesValue());
+    EXPECT_FALSE(option.hasDefaultValue());
+}
+
+TEST(CommandLineOptionTest, EmptyNamesVector) {
+    CommandLineOption option(std::vector<std::string>{}, "Empty names option");
+
+    // getName should return empty string for empty names vector
+    EXPECT_TRUE(option.getName().empty());
+    EXPECT_TRUE(option.getNames().empty());
+}
+
+//==============================================================================
+// CommandLineParser Standalone Tests
+//==============================================================================
+
+TEST(CommandLineParserStandaloneTest, SetApplicationNameAndVersion) {
+    CommandLineParser parser;
+
+    parser.setApplicationName("MyApp");
+    parser.setApplicationVersion("2.0.0");
+
+    // Verify by checking help text generation (which uses these values)
+    testing::internal::CaptureStdout();
+    parser.showHelp(-1);  // -1 means don't exit
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_TRUE(output.find("MyApp") != std::string::npos);
+    EXPECT_TRUE(output.find("2.0.0") != std::string::npos);
+}
+
+TEST(CommandLineParserStandaloneTest, ShowVersionNoExit) {
+    CommandLineParser parser("TestApp", "3.0.0");
+
+    testing::internal::CaptureStdout();
+    parser.showVersion(-1);  // -1 means don't exit
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_TRUE(output.find("TestApp") != std::string::npos);
+    EXPECT_TRUE(output.find("3.0.0") != std::string::npos);
+}
+
+TEST(CommandLineParserStandaloneTest, ShowVersionEmptyName) {
+    CommandLineParser parser;
+
+    testing::internal::CaptureStdout();
+    parser.showVersion(-1);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    // Empty app name should produce no output
+    EXPECT_TRUE(output.empty());
+}
+
+TEST(CommandLineParserStandaloneTest, ShowHelpNoExit) {
+    CommandLineParser parser("HelpTest", "1.0.0");
+    parser.addOption(CommandLineOption("--output", "Output file", "file", "out.txt"));
+
+    testing::internal::CaptureStdout();
+    parser.showHelp(-1);  // -1 means don't exit
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_TRUE(output.find("HelpTest") != std::string::npos);
+    EXPECT_TRUE(output.find("Usage:") != std::string::npos);
+    EXPECT_TRUE(output.find("Options:") != std::string::npos);
+    EXPECT_TRUE(output.find("--output") != std::string::npos);
+    EXPECT_TRUE(output.find("Output file") != std::string::npos);
+    EXPECT_TRUE(output.find("(default: out.txt)") != std::string::npos);
+}
+
+TEST(CommandLineParserStandaloneTest, ShowHelpEmptyAppName) {
+    CommandLineParser parser;
+
+    testing::internal::CaptureStdout();
+    parser.showHelp(-1);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    // Should show "program" as default
+    EXPECT_TRUE(output.find("Usage: program") != std::string::npos);
+}
+
+TEST(CommandLineParserStandaloneTest, AddOptionWithCallback) {
+    CommandLineParser parser("CallbackTest", "1.0.0");
+
+    std::string captured_value;
+    parser.addOption(
+        CommandLineOption("--config", "Config file", "file"),
+        [&captured_value](const std::string& value) {
+            captured_value = value;
+        });
+
+    std::vector<std::string> args = {"program", "--config", "settings.json"};
+    EXPECT_TRUE(parser.parse(args));
+
+    EXPECT_EQ(captured_value, "settings.json");
+}
+
+TEST(CommandLineParserStandaloneTest, ValuesWithDefaultValue) {
+    CommandLineParser parser("DefaultTest", "1.0.0");
+    parser.addOption(CommandLineOption("--level", "Log level", "level", "info"));
+
+    std::vector<std::string> args = {"program"};
+    EXPECT_TRUE(parser.parse(args));
+
+    // values() should return default value when option not set
+    auto vals = parser.values("--level");
+    EXPECT_EQ(vals.size(), 1);
+    EXPECT_EQ(vals[0], "info");
+}
+
+TEST(CommandLineParserStandaloneTest, ValuesNonExistentOption) {
+    CommandLineParser parser("Test", "1.0.0");
+
+    std::vector<std::string> args = {"program"};
+    EXPECT_TRUE(parser.parse(args));
+
+    // values() for non-existent option should return empty vector
+    auto vals = parser.values("--nonexistent");
+    EXPECT_TRUE(vals.empty());
+}
+
+TEST(CommandLineParserStandaloneTest, ValueNonExistentOption) {
+    CommandLineParser parser("Test", "1.0.0");
+
+    std::vector<std::string> args = {"program"};
+    EXPECT_TRUE(parser.parse(args));
+
+    // value() for non-existent option should return empty string
+    EXPECT_TRUE(parser.value("--nonexistent").empty());
+}
+
+TEST(CommandLineParserStandaloneTest, HelpTextWithMultipleNames) {
+    CommandLineParser parser("MultiNameTest", "1.0.0");
+    parser.addOption(CommandLineOption(
+        std::vector<std::string>{"--output", "-o"},
+        "Output file",
+        "file"));
+
+    testing::internal::CaptureStdout();
+    parser.showHelp(-1);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    // Should show both option names
+    EXPECT_TRUE(output.find("--output") != std::string::npos);
+    EXPECT_TRUE(output.find("-o") != std::string::npos);
+}
+
+TEST(CommandLineParserStandaloneTest, DefaultConstructor) {
+    CommandLineParser parser;
+
+    // Should work with empty app name
+    std::vector<std::string> args = {"program", "--help"};
+    EXPECT_TRUE(parser.parse(args));
+    EXPECT_TRUE(parser.isHelpRequested());
+}
+
+TEST(CommandLineParserStandaloneTest, PositionalArgumentsRef) {
+    CommandLineParser parser("Test", "1.0.0");
+
+    std::vector<std::string> args = {"program", "arg1", "arg2", "arg3"};
+    EXPECT_TRUE(parser.parse(args));
+
+    const auto& positional = parser.positionalArguments();
+    EXPECT_EQ(positional.size(), 3);
+    EXPECT_EQ(positional[0], "arg1");
+    EXPECT_EQ(positional[1], "arg2");
+    EXPECT_EQ(positional[2], "arg3");
+}
+
+TEST(CommandLineParserStandaloneTest, SlashOptionPrefix) {
+    CommandLineParser parser("Test", "1.0.0");
+    parser.addOption(CommandLineOption("/debug", "Enable debug mode"));
+
+    std::vector<std::string> args = {"program", "/debug"};
+    EXPECT_TRUE(parser.parse(args));
+    EXPECT_TRUE(parser.isSet("/debug"));
+}
