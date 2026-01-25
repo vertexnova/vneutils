@@ -18,9 +18,12 @@ coverage:
 
 ignore:
   - "tests/**/*"
+  - "*_test.cpp"
   - "external/**/*"
   - "examples/**/*"
   - "_deps/**/*"
+  - "cmake/**/*"
+  - "scripts/**/*"
 
 comment:
   layout: "reach,diff,flags,files"

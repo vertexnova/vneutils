@@ -87,7 +87,17 @@ jobs:
     - name: Generate Coverage Report
       run: |
         lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,unused
-        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/external/*' '*/_deps/*' '*/googletest/*' '*/googlemock/*' --output-file coverage.info --ignore-errors mismatch,unused
+        lcov --remove coverage.info \
+          '/usr/*' \
+          '*/tests/*' \
+          '*_test.cpp' \
+          '*/external/*' \
+          '*/_deps/*' \
+          '*/googletest/*' \
+          '*/googlemock/*' \
+          '*/gtest/*' \
+          '*/gmock/*' \
+          --output-file coverage.info --ignore-errors mismatch,unused
         lcov --list coverage.info --ignore-errors mismatch,unused
 
     - name: Upload coverage reports to Codecov
