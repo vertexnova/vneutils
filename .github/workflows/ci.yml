@@ -93,7 +93,7 @@ jobs:
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
       with:
-        token: ${{ secrets.CODECOV_TOKEN_VNE_UTILS }}
+        token: ${{ secrets.CODECOV_TOKEN }}
         slug: vertexnova/vneutils
         files: ./coverage.info
         fail_ci_if_error: false
