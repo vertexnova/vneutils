@@ -107,8 +107,10 @@ target_link_libraries(vneutils
 # Platform-specific linking
 #==============================================================================
 
-if(NOT WIN32)
-    target_link_libraries(vneutils PRIVATE pthread)
+# Threads::Threads is portable (pthread on Unix/Android; no separate libpthread on Android NDK).
+if(NOT WIN32 AND NOT EMSCRIPTEN)
+    find_package(Threads REQUIRED)
+    target_link_libraries(vneutils PRIVATE Threads::Threads)
 endif()
 
 #==============================================================================
